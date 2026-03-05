@@ -1,0 +1,51 @@
+name: "📱 App Change"
+description: "Build or modify a Canvas or Model-Driven Power App"
+title: "[App] "
+labels: ["canvas-app"]
+body:
+  - type: dropdown
+    id: app-type
+    attributes:
+      label: App Type
+      options:
+        - Canvas App
+        - Model-Driven App
+        - Code App (React)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What app changes are needed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: screens
+    attributes:
+      label: Screens / Views
+      description: List screens to create or modify
+      placeholder: |
+        **New Screen: scr_SubmissionList**
+        - Gallery showing submissions with search
+        - Filter by category and status
+        - "New Submission" button
+
+  - type: textarea
+    id: data-sources
+    attributes:
+      label: Data Sources
+      description: What Dataverse tables or connectors does this use?
+      placeholder: |
+        - cat_submission (Dataverse)
+        - cat_category (Dataverse)
+        - Office 365 Users (for profile info)
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+    validations:
+      required: true

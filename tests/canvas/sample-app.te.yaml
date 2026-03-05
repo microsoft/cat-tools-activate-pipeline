@@ -1,0 +1,26 @@
+testSuite:
+  testSuiteName: "Sample Canvas App Tests"
+  testSuiteDescription: "Template test plan — copy and customize for your canvas app"
+  persona: "admin1"
+  appLogicalName: "cat_yourapphere"
+
+  testCases:
+    - testCaseName: "App Launches Successfully"
+      testCaseDescription: "Verify the app loads without errors"
+      testSteps: |
+        = Assert(true, "App loaded successfully");
+
+    - testCaseName: "Navigation Works"
+      testCaseDescription: "Verify navigation between main screens"
+      testSteps: |
+        = Navigate(scr_Home);
+          Assert(CurrentScreen.Name = "scr_Home", "Should be on Home screen");
+
+    # Add more test cases below:
+    # - testCaseName: "Create Record"
+    #   testCaseDescription: "Test creating a new record"
+    #   testSteps: |
+    #     = Navigate(scr_Form);
+    #       SetProperty(txt_Name.Text, "Test Record");
+    #       Select(btn_Save);
+    #       Assert(Notify_Success.Visible, "Save should succeed");

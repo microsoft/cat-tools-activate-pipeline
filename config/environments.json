@@ -1,0 +1,30 @@
+{
+  "environments": {
+    "development": {
+      "displayName": "CAT Tools - Dev",
+      "url": "https://org-dev.crm.dynamics.com",
+      "environmentId": "REPLACE_WITH_DEV_ENV_ID",
+      "solutionImportType": "Unmanaged",
+      "notes": "Development environment — unmanaged solution for active development"
+    },
+    "staging": {
+      "displayName": "CAT Tools - Staging",
+      "url": "https://org-staging.crm.dynamics.com",
+      "environmentId": "REPLACE_WITH_STAGING_ENV_ID",
+      "solutionImportType": "Managed",
+      "notes": "Staging environment — managed solution for validation"
+    },
+    "production": {
+      "displayName": "CAT Tools - Production",
+      "url": "https://org-prod.crm.dynamics.com",
+      "environmentId": "REPLACE_WITH_PROD_ENV_ID",
+      "solutionImportType": "Managed",
+      "notes": "Production environment — managed solution, requires approval"
+    }
+  },
+  "serviceConnection": {
+    "tenantId": "REPLACE_WITH_TENANT_ID",
+    "clientId": "REPLACE_WITH_APP_ID",
+    "notes": "Service principal needs: Dataverse System Administrator, Power Platform Admin"
+  }
+}

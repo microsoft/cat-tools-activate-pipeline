@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ImportExportXml version="9.2.24014.199" SolutionPackageVersion="9.2" languagecode="1033" generatedBy="CopilotAgent" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <SolutionManifest>
+    <UniqueName>CATToolsActivatePipeline</UniqueName>
+    <LocalizedNames>
+      <LocalizedName description="CAT Tools Activate Pipeline" languagecode="1033" />
+    </LocalizedNames>
+    <Descriptions>
+      <Description description="Agent-driven Power Platform community solution built by the CAT Tools team" languagecode="1033" />
+    </Descriptions>
+    <Version>1.0.0.0</Version>
+    <Managed>0</Managed>
+    <Publisher>
+      <UniqueName>CATTools</UniqueName>
+      <LocalizedNames>
+        <LocalizedName description="CAT Tools" languagecode="1033" />
+      </LocalizedNames>
+      <Descriptions>
+        <Description description="Customer Advisory Team Tools" languagecode="1033" />
+      </Descriptions>
+      <EMailAddress>cat-tools@microsoft.com</EMailAddress>
+      <SupportingWebsiteUrl>https://github.com/denise-msft/cat-tools-activate-pipeline</SupportingWebsiteUrl>
+      <CustomizationPrefix>cat</CustomizationPrefix>
+      <CustomizationOptionValuePrefix>10000</CustomizationOptionValuePrefix>
+    </Publisher>
+    <RootComponents />
+    <MissingDependencies />
+  </SolutionManifest>
+</ImportExportXml>

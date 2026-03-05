@@ -1,0 +1,108 @@
+name: "🎯 PRD Feature Request"
+description: "Define a new feature or capability for the Power Platform solution"
+title: "[PRD] "
+labels: ["prd", "decompose"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Product Requirements Document
+        Describe the feature you want built. An AI agent will decompose this into implementable work items.
+
+  - type: textarea
+    id: overview
+    attributes:
+      label: Overview
+      description: What is this feature? Who is it for? What problem does it solve?
+      placeholder: "This feature enables community members to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-stories
+    attributes:
+      label: User Stories
+      description: List user stories in "As a [role], I want [goal], so that [benefit]" format
+      placeholder: |
+        - As a community member, I want to submit ideas, so that I can contribute to the project
+        - As an admin, I want to review submissions, so that I can curate quality content
+    validations:
+      required: true
+
+  - type: textarea
+    id: data-model
+    attributes:
+      label: Data Model
+      description: What tables, columns, and relationships are needed?
+      placeholder: |
+        **Tables:**
+        - Submission (name, description, status, category, submitter)
+        - Category (name, description, sort order)
+
+        **Relationships:**
+        - Submission → Category (many-to-one)
+        - Submission → Contact (many-to-one, submitter)
+
+  - type: textarea
+    id: app-screens
+    attributes:
+      label: App Screens / UI
+      description: What screens or views are needed? Canvas app or model-driven?
+      placeholder: |
+        **Canvas App: Community Portal**
+        - Home screen with featured submissions
+        - Submit new idea form
+        - My submissions list
+        - Idea detail view with voting
+
+  - type: textarea
+    id: automations
+    attributes:
+      label: Automations / Flows
+      description: What automated processes are needed?
+      placeholder: |
+        - When submission created → notify admin team
+        - Daily digest of new submissions → email to reviewers
+        - When status changed to "Approved" → notify submitter
+
+  - type: textarea
+    id: agents
+    attributes:
+      label: Copilot Studio Agents
+      description: Any conversational AI agents needed?
+      placeholder: |
+        - Community Helper agent: answers FAQs, helps submit ideas, checks status
+
+  - type: textarea
+    id: reports
+    attributes:
+      label: Power BI Reports / Dashboards
+      description: What analytics or reporting is needed?
+      placeholder: |
+        - Submission analytics dashboard (count by status, category, time trends)
+        - Community engagement metrics
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How do we know this feature is done?
+      placeholder: |
+        - [ ] Users can submit ideas through the portal
+        - [ ] Admins receive notifications for new submissions
+        - [ ] Dashboard shows real-time submission metrics
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "P0 - Critical"
+        - "P1 - High"
+        - "P2 - Medium"
+        - "P3 - Low"
+    validations:
+      required: true

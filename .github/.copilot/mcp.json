@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "power-platform-cli": {
+      "type": "stdio",
+      "command": "pac",
+      "args": [],
+      "description": "Power Platform CLI for solution management, environment operations, and Dataverse interactions"
+    },
+    "azure": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@azure/mcp@latest", "server", "start"],
+      "description": "Azure MCP Server for Azure resource management (App Service, Functions, Key Vault, Storage)"
+    },
+    "dataverse": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@microsoft/dataverse-mcp@latest"],
+      "description": "Dataverse MCP for direct table operations, schema queries, and data manipulation"
+    }
+  }
+}

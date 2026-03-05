@@ -1,0 +1,34 @@
+{
+  "environmentVariables": {
+    "cat_AdminEmailAddress": {
+      "type": "String",
+      "displayName": "Admin Email Address",
+      "description": "Email address for admin notifications",
+      "defaultValue": "cat-tools-admin@microsoft.com"
+    },
+    "cat_TeamsChannelId": {
+      "type": "String",
+      "displayName": "Notifications Teams Channel ID",
+      "description": "Teams channel ID for posting solution notifications",
+      "defaultValue": ""
+    },
+    "cat_TeamsGroupId": {
+      "type": "String",
+      "displayName": "Notifications Teams Group ID",
+      "description": "Teams group (team) ID for posting solution notifications",
+      "defaultValue": ""
+    },
+    "cat_MaxSubmissionsPerDay": {
+      "type": "Number",
+      "displayName": "Max Submissions Per Day",
+      "description": "Maximum number of submissions allowed per user per day",
+      "defaultValue": "10"
+    },
+    "cat_EnableEmailNotifications": {
+      "type": "Boolean",
+      "displayName": "Enable Email Notifications",
+      "description": "Feature flag to enable/disable email notifications",
+      "defaultValue": "true"
+    }
+  }
+}

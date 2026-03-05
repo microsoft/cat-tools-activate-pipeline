@@ -1,0 +1,25 @@
+{
+  "connectionReferences": {
+    "cat_SharedCommonDataService": {
+      "connectorId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+      "displayName": "Dataverse (Current Environment)",
+      "description": "Primary Dataverse connection for the solution",
+      "notes": "Maps to the environment where the solution is imported"
+    },
+    "cat_SharedOffice365Users": {
+      "connectorId": "/providers/Microsoft.PowerApps/apis/shared_office365users",
+      "displayName": "Office 365 Users",
+      "description": "Used for looking up user profile information"
+    },
+    "cat_SharedTeams": {
+      "connectorId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+      "displayName": "Microsoft Teams",
+      "description": "Used for posting notifications to Teams channels"
+    },
+    "cat_SharedOffice365Outlook": {
+      "connectorId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+      "displayName": "Office 365 Outlook",
+      "description": "Used for sending email notifications"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+# Packed solution zips
+*.zip
+
+# .NET build artifacts
+bin/
+obj/
+
+# Node modules (if using any JS tooling)
+node_modules/
+
+# Test output
+TestOutput/
+checker-results/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vs/
+.vscode/
+*.suo
+*.user
+
+# Secrets (never commit these)
+*.pfx
+*.key
+*.pem
+secrets.json
+
+# Power BI Desktop files (use PBIP format instead)
+*.pbix
+
+# Power Apps msapp files (use unpacked YAML instead)
+*.msapp

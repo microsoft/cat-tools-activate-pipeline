@@ -1,0 +1,62 @@
+name: Deploy to Dev
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'solution/**'
+      - 'config/**'
+
+  workflow_dispatch:
+
+env:
+  SOLUTION_NAME: CATToolsActivatePipeline
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-dev:
+    name: Deploy to Dev Environment
+    runs-on: windows-latest
+    environment: development
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Install PAC CLI
+        run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+
+      - name: Authenticate
+        run: |
+          pac auth create `
+            --name DevEnvironment `
+            --applicationId ${{ secrets.PP_CLIENT_ID }} `
+            --clientSecret ${{ secrets.PP_CLIENT_SECRET }} `
+            --tenant ${{ secrets.PP_TENANT_ID }} `
+            --environment ${{ secrets.PP_DEV_ENV_URL }}
+
+      - name: Pack Solution (Unmanaged for Dev)
+        run: |
+          pac solution pack `
+            --zipfile "${{ env.SOLUTION_NAME }}.zip" `
+            --folder solution `
+            --packagetype Unmanaged `
+            --allowDelete true `
+            --allowWrite true
+
+      - name: Import to Dev
+        run: |
+          pac solution import `
+            --path "${{ env.SOLUTION_NAME }}.zip" `
+            --activate-plugins true `
+            --force-overwrite true `
+            --async true
+
+      - name: Publish Customizations
+        run: pac org publish-all

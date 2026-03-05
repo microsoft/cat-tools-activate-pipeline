@@ -1,0 +1,148 @@
+name: Validate Power Platform Solution
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'solution/**'
+      - 'tests/**'
+      - 'config/**'
+
+env:
+  SOLUTION_NAME: CATToolsActivatePipeline
+  SOLUTION_FOLDER: solution
+  SOLUTION_TYPE: Unmanaged
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    name: Pack & Validate Solution
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Install PAC CLI
+        run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+
+      - name: Authenticate to Power Platform
+        run: |
+          pac auth create `
+            --name DevEnvironment `
+            --applicationId ${{ secrets.PP_CLIENT_ID }} `
+            --clientSecret ${{ secrets.PP_CLIENT_SECRET }} `
+            --tenant ${{ secrets.PP_TENANT_ID }} `
+            --environment ${{ secrets.PP_DEV_ENV_URL }}
+
+      - name: Pack Solution
+        run: |
+          pac solution pack `
+            --zipfile "${{ env.SOLUTION_NAME }}.zip" `
+            --folder "${{ env.SOLUTION_FOLDER }}" `
+            --packagetype ${{ env.SOLUTION_TYPE }} `
+            --allowDelete true `
+            --allowWrite true
+
+      - name: Run Solution Checker
+        run: |
+          pac solution check `
+            --path "${{ env.SOLUTION_NAME }}.zip" `
+            --outputDirectory "checker-results"
+        continue-on-error: true
+
+      - name: Import to Dev Environment
+        run: |
+          pac solution import `
+            --path "${{ env.SOLUTION_NAME }}.zip" `
+            --activate-plugins true `
+            --force-overwrite true `
+            --async true
+        continue-on-error: true
+
+      - name: Upload Solution Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: solution-zip
+          path: "${{ env.SOLUTION_NAME }}.zip"
+
+      - name: Upload Checker Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checker-results
+          path: checker-results/
+          if-no-files-found: ignore
+
+  test:
+    name: Run Automated Tests
+    needs: validate
+    runs-on: windows-latest
+    if: success()
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Install PAC CLI
+        run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+
+      - name: Install Playwright Browsers
+        run: |
+          dotnet tool install --global Microsoft.Playwright.CLI
+          playwright install chromium
+
+      - name: Authenticate to Power Platform
+        run: |
+          pac auth create `
+            --name DevEnvironment `
+            --applicationId ${{ secrets.PP_CLIENT_ID }} `
+            --clientSecret ${{ secrets.PP_CLIENT_SECRET }} `
+            --tenant ${{ secrets.PP_TENANT_ID }} `
+            --environment ${{ secrets.PP_DEV_ENV_URL }}
+
+      - name: Run Canvas App Tests
+        if: hashFiles('tests/canvas/*.te.yaml') != ''
+        run: |
+          Get-ChildItem -Path tests/canvas -Filter "*.te.yaml" | ForEach-Object {
+            Write-Host "Running test: $($_.Name)"
+            pac test run `
+              --provider "canvas" `
+              --test-plan-file $_.FullName `
+              --tenant ${{ secrets.PP_TENANT_ID }} `
+              --environment ${{ secrets.PP_DEV_ENV_ID }}
+          }
+        continue-on-error: true
+
+      - name: Run MDA Tests
+        if: hashFiles('tests/mda/*.te.yaml') != ''
+        run: |
+          Get-ChildItem -Path tests/mda -Filter "*.te.yaml" | ForEach-Object {
+            Write-Host "Running test: $($_.Name)"
+            pac test run `
+              --provider "mda" `
+              --test-plan-file $_.FullName `
+              --tenant ${{ secrets.PP_TENANT_ID }} `
+              --environment ${{ secrets.PP_DEV_ENV_ID }}
+          }
+        continue-on-error: true
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestOutput/
+          if-no-files-found: ignore

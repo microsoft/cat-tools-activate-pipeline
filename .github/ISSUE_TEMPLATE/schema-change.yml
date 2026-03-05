@@ -1,0 +1,55 @@
+name: "📊 Schema Change"
+description: "Add or modify Dataverse tables, columns, or relationships"
+title: "[Schema] "
+labels: ["schema"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What schema changes are needed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: tables
+    attributes:
+      label: Tables
+      description: List tables to create or modify
+      placeholder: |
+        **New Table: cat_submission**
+        - cat_name (Text, 200, Required) — Submission title
+        - cat_description (Multiline Text, 10000) — Detailed description
+        - cat_status (Choice: Draft/Submitted/Approved/Rejected)
+        - cat_categoryid (Lookup → cat_category)
+        - cat_submitterid (Lookup → Contact)
+
+  - type: textarea
+    id: relationships
+    attributes:
+      label: Relationships
+      description: Define lookups and many-to-many relationships
+      placeholder: |
+        - cat_submission → cat_category (N:1, Lookup)
+        - cat_submission → contact (N:1, Submitter)
+
+  - type: textarea
+    id: views
+    attributes:
+      label: Views
+      description: What views/queries are needed?
+      placeholder: |
+        - Active Submissions (status != Draft)
+        - My Submissions (owner = current user)
+        - Pending Review (status = Submitted)
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      placeholder: |
+        - [ ] Tables created with all specified columns
+        - [ ] Relationships configured with appropriate cascade rules
+        - [ ] Views return expected data
+    validations:
+      required: true

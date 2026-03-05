@@ -1,0 +1,20 @@
+{
+  "testSuiteName": "Dataverse Schema Validation",
+  "description": "Validates that expected tables and columns exist in the target environment",
+  "validations": [
+    {
+      "name": "Verify cat_sample table exists",
+      "type": "table_exists",
+      "table": "cat_sample",
+      "expected": true
+    },
+    {
+      "name": "Verify cat_sample has name column",
+      "type": "column_exists",
+      "table": "cat_sample",
+      "column": "cat_name",
+      "expected": true
+    }
+  ],
+  "notes": "Update this file as you add tables and columns to the solution. CI pipeline uses this to validate schema after import."
+}

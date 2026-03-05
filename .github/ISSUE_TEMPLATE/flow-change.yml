@@ -1,0 +1,59 @@
+name: "⚡ Flow Change"
+description: "Build or modify a Power Automate cloud flow"
+title: "[Flow] "
+labels: ["cloud-flow"]
+body:
+  - type: dropdown
+    id: flow-type
+    attributes:
+      label: Flow Type
+      options:
+        - Automated (event trigger)
+        - Instant (manual/button trigger)
+        - Scheduled (recurring)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What should this flow do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: trigger
+    attributes:
+      label: Trigger
+      description: What starts this flow?
+      placeholder: |
+        When a row is created in cat_submission table
+
+  - type: textarea
+    id: actions
+    attributes:
+      label: Actions
+      description: Step-by-step what the flow should do
+      placeholder: |
+        1. Get submitter details from Contact table
+        2. Get admin team members
+        3. Send email notification to admins
+        4. Post message to Teams channel
+        5. Update submission status to "Submitted"
+
+  - type: textarea
+    id: error-handling
+    attributes:
+      label: Error Handling
+      description: What should happen if something goes wrong?
+      placeholder: |
+        - If email fails, retry 3 times then log error to cat_errorlog
+        - If Teams post fails, continue (non-critical)
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+    validations:
+      required: true

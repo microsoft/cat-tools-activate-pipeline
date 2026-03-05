@@ -1,0 +1,60 @@
+name: Deploy to Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm staging deployment'
+        required: true
+        type: string
+
+env:
+  SOLUTION_NAME: CATToolsActivatePipeline
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging Environment
+    runs-on: windows-latest
+    environment: staging
+    if: github.event.inputs.confirm == 'deploy'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Install PAC CLI
+        run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+
+      - name: Authenticate
+        run: |
+          pac auth create `
+            --name StagingEnvironment `
+            --applicationId ${{ secrets.PP_CLIENT_ID }} `
+            --clientSecret ${{ secrets.PP_CLIENT_SECRET }} `
+            --tenant ${{ secrets.PP_TENANT_ID }} `
+            --environment ${{ secrets.PP_STAGING_ENV_URL }}
+
+      - name: Pack Solution (Managed for Staging)
+        run: |
+          pac solution pack `
+            --zipfile "${{ env.SOLUTION_NAME }}_managed.zip" `
+            --folder solution `
+            --packagetype Managed
+
+      - name: Import Managed Solution
+        run: |
+          pac solution import `
+            --path "${{ env.SOLUTION_NAME }}_managed.zip" `
+            --activate-plugins true `
+            --force-overwrite true `
+            --async true
+
+      - name: Publish Customizations
+        run: pac org publish-all
