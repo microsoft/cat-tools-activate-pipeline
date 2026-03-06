@@ -14,6 +14,7 @@ env:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   deploy-dev:
@@ -36,8 +37,8 @@ jobs:
         run: |
           pac auth create `
             --name DevEnvironment `
+            --githubFederated `
             --applicationId ${{ secrets.PP_CLIENT_ID }} `
-            --clientSecret ${{ secrets.PP_CLIENT_SECRET }} `
             --tenant ${{ secrets.PP_TENANT_ID }} `
             --environment ${{ secrets.PP_DEV_ENV_URL }}
 

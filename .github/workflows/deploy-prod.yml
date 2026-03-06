@@ -13,6 +13,7 @@ env:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   deploy-prod:
@@ -36,8 +37,8 @@ jobs:
         run: |
           pac auth create `
             --name ProdEnvironment `
+            --githubFederated `
             --applicationId ${{ secrets.PP_CLIENT_ID }} `
-            --clientSecret ${{ secrets.PP_CLIENT_SECRET }} `
             --tenant ${{ secrets.PP_TENANT_ID }} `
             --environment ${{ secrets.PP_PROD_ENV_URL }}
 

@@ -13,6 +13,7 @@ env:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   deploy-staging:
@@ -36,8 +37,8 @@ jobs:
         run: |
           pac auth create `
             --name StagingEnvironment `
+            --githubFederated `
             --applicationId ${{ secrets.PP_CLIENT_ID }} `
-            --clientSecret ${{ secrets.PP_CLIENT_SECRET }} `
             --tenant ${{ secrets.PP_TENANT_ID }} `
             --environment ${{ secrets.PP_STAGING_ENV_URL }}
 
