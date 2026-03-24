@@ -1,0 +1,241 @@
+name: Plan & Review — Decompose PRD into Work Items
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+  issues: write
+  id-token: write
+
+jobs:
+  decompose-prd:
+    name: Decompose PRD into Work Items
+    if: github.event.label.name == 'decompose' && contains(github.event.issue.labels.*.name, 'prd')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read PRD Issue Body
+        id: prd
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            core.setOutput('issue_number', issue.number);
+            core.setOutput('issue_title', issue.title);
+            core.setOutput('issue_body', issue.body);
+
+      - name: Read PRD Reference Docs
+        id: docs
+        run: |
+          # Check if a PRD doc is referenced in the issue body
+          PRD_FILE=""
+          if [ -f "docs/prd/content-activation-pipeline.md" ]; then
+            PRD_FILE="docs/prd/content-activation-pipeline.md"
+          fi
+          echo "prd_file=$PRD_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Decompose PRD into Child Issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ steps.prd.outputs.issue_number }};
+            const issueBody = context.payload.issue.body || '';
+
+            // Read the solution architect agent instructions
+            const fs = require('fs');
+            let architectInstructions = '';
+            try {
+              architectInstructions = fs.readFileSync('.github/agents/solution-architect.md', 'utf8');
+            } catch (e) {
+              console.log('No architect instructions found, using defaults');
+            }
+
+            // Parse the PRD body for component sections
+            const components = [];
+
+            // Schema components (tables)
+            const tableMatches = issueBody.match(/`(cap_\w+)`.*?—\s*(.+)/g);
+            if (tableMatches) {
+              for (const match of tableMatches) {
+                const parsed = match.match(/`(cap_\w+)`.*?—\s*(.+)/);
+                if (parsed) {
+                  components.push({
+                    type: 'schema',
+                    label: 'schema',
+                    name: parsed[1],
+                    description: parsed[2],
+                    priority: 1
+                  });
+                }
+              }
+            }
+
+            // Flow components
+            const flowSection = issueBody.match(/### Flow \d+: (.+)\n([\s\S]*?)(?=### Flow|\n## )/g);
+            if (flowSection) {
+              let flowPriority = 3;
+              for (const flow of flowSection) {
+                const nameMatch = flow.match(/### Flow \d+: (.+)/);
+                if (nameMatch) {
+                  components.push({
+                    type: 'cloud-flow',
+                    label: 'cloud-flow',
+                    name: nameMatch[1],
+                    description: flow.trim(),
+                    priority: flowPriority++
+                  });
+                }
+              }
+            }
+
+            // App component
+            if (issueBody.includes('App Screens') || issueBody.includes('Code App')) {
+              components.push({
+                type: 'canvas-app',
+                label: 'canvas-app',
+                name: 'Content Activation Management App',
+                description: 'React Code App with Fluent UI v9 for pipeline management (Dashboard, Ideas, Review, Schedule, Platforms, History screens)',
+                priority: 2
+              });
+            }
+
+            // Agent component
+            if (issueBody.includes('Copilot Studio Agent') || issueBody.includes('Copilot agent')) {
+              components.push({
+                type: 'copilot-agent',
+                label: 'copilot-agent',
+                name: 'Content Pipeline Helper Agent',
+                description: 'Conversational agent for pipeline status queries, content submission, and review stats',
+                priority: 5
+              });
+            }
+
+            // Power BI component
+            if (issueBody.includes('Power BI') || issueBody.includes('Dashboard')) {
+              components.push({
+                type: 'power-bi',
+                label: 'power-bi',
+                name: 'Content Pipeline Analytics Dashboard',
+                description: 'Pipeline throughput, approval turnaround, platform distribution, content velocity, failure rate metrics',
+                priority: 6
+              });
+            }
+
+            // Config component
+            if (issueBody.includes('Environment Variables') || issueBody.includes('Connection References')) {
+              components.push({
+                type: 'config',
+                label: 'config',
+                name: 'Environment Variables & Connection References',
+                description: 'Configure all environment variables and connection references for deployment portability',
+                priority: 7
+              });
+            }
+
+            // Test component
+            components.push({
+              type: 'test',
+              label: 'test',
+              name: 'Automated Test Suite',
+              description: 'Dataverse schema validation, Playwright E2E tests for Code App, flow test scenarios, canvas app test plans',
+              priority: 8
+            });
+
+            // Sort by priority
+            components.sort((a, b) => a.priority - b.priority);
+
+            // Create child issues
+            const createdIssues = [];
+            const schemaIssues = [];
+
+            for (const comp of components) {
+              // Build dependency text
+              let dependsOn = '';
+              if (comp.type !== 'schema') {
+                dependsOn = `\n\n**Dependencies**: Blocked by schema issues (${schemaIssues.map(i => '#' + i).join(', ') || 'pending creation'})`;
+              }
+
+              const body = `## Summary\n\n${comp.description}\n\n## Technical Details\n- **Component Type**: ${comp.type}\n- **Parent PRD**: #${issueNumber}${dependsOn}\n\n## Acceptance Criteria\n- [ ] Component implemented and committed to feature branch\n- [ ] Solution packs without errors\n- [ ] Schema validation tests pass (if applicable)\n- [ ] PR opened and linked to this issue\n\n---\n*Auto-generated from PRD #${issueNumber} by the plan-and-review workflow.*`;
+
+              const newIssue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `[${comp.label}] ${comp.name}`,
+                body: body,
+                labels: [comp.label, 'auto-decomposed']
+              });
+
+              createdIssues.push({
+                number: newIssue.data.number,
+                title: newIssue.data.title,
+                type: comp.type,
+                label: comp.label
+              });
+
+              if (comp.type === 'schema') {
+                schemaIssues.push(newIssue.data.number);
+              }
+
+              console.log(`Created issue #${newIssue.data.number}: ${comp.name}`);
+            }
+
+            // Create the Plan Review summary issue
+            const planSummary = createdIssues.map(i =>
+              `| #${i.number} | \`${i.label}\` | ${i.title.replace(/^\[.*?\]\s*/, '')} | ⬜ Pending |`
+            ).join('\n');
+
+            const planBody = `# 📋 Plan Review: ${context.payload.issue.title}\n\n` +
+              `> Review the decomposed work items below. When you're satisfied with the plan, add the \`plan-approved\` label to **this issue** to trigger agent assignment.\n\n` +
+              `## Parent PRD\n#${issueNumber}\n\n` +
+              `## Work Items (${createdIssues.length} total)\n\n` +
+              `| Issue | Type | Component | Status |\n` +
+              `|-------|------|-----------|--------|\n` +
+              `${planSummary}\n\n` +
+              `## Execution Order\n` +
+              `1. **Schema first** — All \`schema\` issues must complete before app/flow work\n` +
+              `2. **App + Flows in parallel** — Can proceed once schema is done\n` +
+              `3. **Agent + Reports** — Can start after core data model is working\n` +
+              `4. **Config + Tests** — Final polish and validation\n\n` +
+              `## Actions\n` +
+              `- ✅ **Approve plan**: Add the \`plan-approved\` label to this issue\n` +
+              `- ✏️ **Edit**: Modify any child issue directly, add/remove issues as needed\n` +
+              `- ❌ **Reject**: Close this issue and revise the PRD\n\n` +
+              `---\n*Auto-generated by the plan-and-review workflow.*`;
+
+            const planReview = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Plan Review] ${context.payload.issue.title.replace('[PRD] ', '')}`,
+              body: planBody,
+              labels: ['plan-review']
+            });
+
+            // Post summary comment on the original PRD issue
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `## 🎯 PRD Decomposed into ${createdIssues.length} Work Items\n\n` +
+                `Plan review issue: #${planReview.data.number}\n\n` +
+                createdIssues.map(i => `- #${i.number} — ${i.title}`).join('\n') +
+                `\n\n**Next step**: Review the plan at #${planReview.data.number} and add the \`plan-approved\` label when ready to start building.`
+            });
+
+            // Remove the decompose label (one-shot)
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                name: 'decompose'
+              });
+            } catch (e) {
+              console.log('Could not remove decompose label:', e.message);
+            }
+
+            console.log(`Plan review issue: #${planReview.data.number}`);
+            console.log(`Total work items created: ${createdIssues.length}`);

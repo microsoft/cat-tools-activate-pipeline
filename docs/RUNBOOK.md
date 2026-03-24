@@ -47,7 +47,36 @@ In your dev environment, create (or verify) the publisher:
 
 ## Daily Workflow
 
-### Creating a New Feature
+### Creating a New Feature (Full Automated Flow)
+
+```
+1. Write a PRD → Create issue with "PRD Feature" template
+2. Label it: prd + decompose
+3. ⚡ Plan & Review workflow fires:
+   - Auto-decomposes PRD into child issues (schema, app, flow, agent, report, config, test)
+   - Creates a "Plan Review" summary issue
+   - Posts the plan on the original PRD issue
+4. You review the plan:
+   - Edit child issues (modify scope, acceptance criteria)
+   - Add or remove issues as needed
+   - When ready → add `plan-approved` label to the Plan Review issue
+5. ⚡ Dispatch Agents workflow fires:
+   - Wave 1 (schema) issues assigned to @copilot immediately
+   - Wave 2-4 (app/flow/agent/report/config/test) queued with wave labels
+6. Copilot creates branches, edits solution files, opens PRs
+7. CI validates each PR:
+   - Pack solution (pac solution pack)
+   - Solution Checker (pac solution check)
+   - Import to dev (pac solution import)
+   - Playwright E2E tests (schema validation + Code App tests)
+   - PAC Test Engine (canvas + MDA tests)
+   - Results posted as PR comment + uploaded as artifacts
+8. You review PRs and merge
+9. Dev deploy runs automatically on merge to master
+10. To dispatch next wave: add `dispatch-next-wave` label to Plan Review issue
+```
+
+### Creating a New Feature (Manual Flow)
 
 ```
 1. Write a PRD → Create issue with "PRD Feature" template
@@ -87,6 +116,11 @@ In your dev environment, create (or verify) the publisher:
 |-------|-------------|
 | `prd` | Product Requirements Documents |
 | `decompose` | PRD needs to be broken into work items |
+| `plan-review` | Auto-created plan review summary issue |
+| `plan-approved` | Add to Plan Review issue to trigger agent dispatch |
+| `auto-decomposed` | Auto-tagged on issues created by the plan workflow |
+| `wave-2` / `wave-3` / `wave-4` | Queued execution waves |
+| `dispatch-next-wave` | Add to Plan Review to dispatch next queued wave |
 | `schema` | Dataverse table/column/relationship changes |
 | `canvas-app` | Canvas Power App work |
 | `model-app` | Model-driven app work |

@@ -12,6 +12,15 @@ node_modules/
 TestOutput/
 checker-results/
 
+# Playwright
+tests/e2e/playwright/.auth/user.json
+tests/e2e/test-results/
+tests/e2e/playwright-report/
+
+# Environment files
+.env
+.env.local
+
 # OS files
 .DS_Store
 Thumbs.db

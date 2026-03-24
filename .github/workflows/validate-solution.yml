@@ -7,6 +7,7 @@ on:
       - 'solution/**'
       - 'tests/**'
       - 'config/**'
+      - 'src/**'
 
 env:
   SOLUTION_NAME: CATToolsActivatePipeline
@@ -140,10 +141,22 @@ jobs:
       - name: Install PAC CLI
         run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
 
-      - name: Install Playwright Browsers
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright & Dependencies
         run: |
-          dotnet tool install --global Microsoft.Playwright.CLI
-          playwright install chromium
+          cd tests/e2e
+          npm ci
+          npx playwright install chromium --with-deps
+
+      - name: Install PAC CLI Playwright
+        run: |
+          dotnet tool install --global Microsoft.Playwright.CLI 2>$null
+          playwright install chromium 2>$null
+        continue-on-error: true
 
       - name: Authenticate to Power Platform
         run: |
@@ -154,7 +167,49 @@ jobs:
             --tenant ${{ secrets.PP_TENANT_ID }} `
             --environment ${{ secrets.PP_DEV_ENV_URL }}
 
-      - name: Run Canvas App Tests
+      - name: Acquire Access Token for E2E Tests
+        id: token
+        run: |
+          $tokenResponse = Invoke-RestMethod `
+            -Method Post `
+            -Uri "https://login.microsoftonline.com/${{ secrets.PP_TENANT_ID }}/oauth2/v2.0/token" `
+            -Body @{
+              grant_type    = "client_credentials"
+              client_id     = "${{ secrets.PP_CLIENT_ID }}"
+              client_secret = "${{ secrets.PP_CLIENT_SECRET }}"
+              scope         = "${{ secrets.PP_DEV_ENV_URL }}/.default"
+            } -ErrorAction SilentlyContinue
+
+          if ($tokenResponse) {
+            echo "PP_ACCESS_TOKEN=$($tokenResponse.access_token)" >> $env:GITHUB_ENV
+            echo "token_acquired=true" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "token_acquired=false" >> $env:GITHUB_OUTPUT
+            Write-Warning "Could not acquire token — E2E tests will be skipped"
+          }
+        continue-on-error: true
+
+      - name: Run Playwright E2E Tests (Schema Validation)
+        if: steps.token.outputs.token_acquired == 'true'
+        run: |
+          cd tests/e2e
+          npx playwright test schema-validation --reporter=html,json,github
+        env:
+          PP_DEV_ENV_URL: ${{ secrets.PP_DEV_ENV_URL }}
+          PP_ACCESS_TOKEN: ${{ env.PP_ACCESS_TOKEN }}
+        continue-on-error: true
+
+      - name: Run Playwright E2E Tests (Code App)
+        if: steps.token.outputs.token_acquired == 'true'
+        run: |
+          cd tests/e2e
+          npx playwright test code-app --reporter=html,json,github
+        env:
+          PP_DEV_ENV_URL: ${{ secrets.PP_DEV_ENV_URL }}
+          PP_ACCESS_TOKEN: ${{ env.PP_ACCESS_TOKEN }}
+        continue-on-error: true
+
+      - name: Run Canvas App Tests (PAC Test Engine)
         if: hashFiles('tests/canvas/*.te.yaml') != ''
         run: |
           Get-ChildItem -Path tests/canvas -Filter "*.te.yaml" | ForEach-Object {
@@ -167,7 +222,7 @@ jobs:
           }
         continue-on-error: true
 
-      - name: Run MDA Tests
+      - name: Run MDA Tests (PAC Test Engine)
         if: hashFiles('tests/mda/*.te.yaml') != ''
         run: |
           Get-ChildItem -Path tests/mda -Filter "*.te.yaml" | ForEach-Object {
@@ -180,7 +235,7 @@ jobs:
           }
         continue-on-error: true
 
-      - name: Run Dataverse Schema Validation
+      - name: Run Dataverse Schema Validation (PowerShell)
         run: |
           .\tests\scripts\Run-DataverseValidation.ps1 `
             -ValidationFile "tests/dataverse/schema-validation.json" `
@@ -193,20 +248,44 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const glob = require('glob');
             let summaryParts = [];
-            
-            // Collect all markdown summaries from test output
+
+            // Collect markdown summaries from all test sources
             const mdFiles = [
               'TestOutput/dataverse/schema-validation-summary.md'
             ];
-            
+
             for (const mdFile of mdFiles) {
               if (fs.existsSync(mdFile)) {
                 summaryParts.push(fs.readFileSync(mdFile, 'utf8'));
               }
             }
-            
+
+            // Add Playwright results summary
+            const playwrightResults = 'TestOutput/e2e/results.json';
+            if (fs.existsSync(playwrightResults)) {
+              try {
+                const results = JSON.parse(fs.readFileSync(playwrightResults, 'utf8'));
+                const stats = results.stats || {};
+                const passed = stats.expected || 0;
+                const failed = stats.unexpected || 0;
+                const skipped = stats.skipped || 0;
+                const icon = failed > 0 ? '❌' : '✅';
+
+                summaryParts.push(
+                  `## ${icon} Playwright E2E Tests\n\n` +
+                  `| Metric | Count |\n|--------|-------|\n` +
+                  `| ✅ Passed | ${passed} |\n` +
+                  `| ❌ Failed | ${failed} |\n` +
+                  `| ⏭️ Skipped | ${skipped} |\n` +
+                  `| 📊 Total | ${passed + failed + skipped} |\n\n` +
+                  `> Full HTML report available in the \`e2e-test-results\` artifact.`
+                );
+              } catch (e) {
+                console.log('Could not parse Playwright results:', e.message);
+              }
+            }
+
             if (summaryParts.length > 0) {
               const fullSummary = summaryParts.join('\n\n---\n\n');
               const prNumber = context.payload.pull_request?.number;
@@ -221,10 +300,26 @@ jobs:
               await core.summary.addRaw(fullSummary).write();
             }
 
-      - name: Upload Test Results
+      - name: Upload Dataverse Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: TestOutput/
+          if-no-files-found: ignore
+
+      - name: Upload Playwright E2E Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: TestOutput/e2e/
+          if-no-files-found: ignore
+
+      - name: Upload Failure Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure-screenshots
+          path: TestOutput/e2e/test-results/
           if-no-files-found: ignore

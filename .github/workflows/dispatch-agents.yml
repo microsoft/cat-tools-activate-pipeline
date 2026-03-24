@@ -1,0 +1,214 @@
+name: Dispatch Agents — Auto-assign Work Items
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  dispatch-agents:
+    name: Assign Work Items to Copilot Agent
+    if: github.event.label.name == 'plan-approved' && contains(github.event.issue.labels.*.name, 'plan-review')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Parse Plan & Dispatch Agents
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const planIssue = context.payload.issue;
+            const planBody = planIssue.body || '';
+
+            // Extract child issue numbers from the plan review table
+            const issueRefs = [...planBody.matchAll(/#(\d+)/g)].map(m => parseInt(m[1]));
+            const uniqueIssues = [...new Set(issueRefs)];
+
+            // Filter out the parent PRD issue (referenced in "Parent PRD" section)
+            const prdMatch = planBody.match(/## Parent PRD\s*\n#(\d+)/);
+            const prdNumber = prdMatch ? parseInt(prdMatch[1]) : null;
+            const childIssues = uniqueIssues.filter(n => n !== prdNumber && n !== planIssue.number);
+
+            if (childIssues.length === 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: planIssue.number,
+                body: '⚠️ No child issues found in the plan. Please check the plan format.'
+              });
+              return;
+            }
+
+            // Fetch all child issues with their labels
+            const issueDetails = [];
+            for (const num of childIssues) {
+              try {
+                const { data: issue } = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: num
+                });
+                if (issue.state === 'open') {
+                  issueDetails.push({
+                    number: issue.number,
+                    title: issue.title,
+                    labels: issue.labels.map(l => l.name)
+                  });
+                }
+              } catch (e) {
+                console.log(`Could not fetch issue #${num}: ${e.message}`);
+              }
+            }
+
+            // Define execution waves based on component type
+            const waves = {
+              1: { name: 'Schema', labels: ['schema'], delay: 0 },
+              2: { name: 'Apps & Flows', labels: ['canvas-app', 'model-app', 'cloud-flow', 'web-resource'], delay: 0 },
+              3: { name: 'Agents & Reports', labels: ['copilot-agent', 'power-bi'], delay: 0 },
+              4: { name: 'Config & Tests', labels: ['config', 'test'], delay: 0 }
+            };
+
+            // Categorize issues into waves
+            const waveAssignments = {};
+            for (const [waveNum, wave] of Object.entries(waves)) {
+              waveAssignments[waveNum] = issueDetails.filter(issue =>
+                issue.labels.some(l => wave.labels.includes(l))
+              );
+            }
+
+            // Assign Wave 1 (schema) immediately to copilot
+            const wave1Issues = waveAssignments['1'] || [];
+            const assignedIssues = [];
+
+            for (const issue of wave1Issues) {
+              try {
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  assignees: ['copilot']
+                });
+                assignedIssues.push(issue);
+                console.log(`Assigned #${issue.number} to copilot (Wave 1: Schema)`);
+              } catch (e) {
+                console.log(`Could not assign #${issue.number}: ${e.message}`);
+              }
+            }
+
+            // Label remaining waves for later dispatch
+            for (const [waveNum, issues] of Object.entries(waveAssignments)) {
+              if (waveNum === '1') continue; // Already assigned
+              for (const issue of issues) {
+                try {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    labels: [`wave-${waveNum}`]
+                  });
+                } catch (e) {
+                  console.log(`Could not label #${issue.number}: ${e.message}`);
+                }
+              }
+            }
+
+            // Build status report
+            const waveReport = Object.entries(waveAssignments).map(([num, issues]) => {
+              const wave = waves[num];
+              const status = num === '1' ? '🚀 **Dispatched**' : '⏳ Queued';
+              const issueList = issues.map(i => `  - #${i.number} — ${i.title}`).join('\n');
+              return `### Wave ${num}: ${wave.name} ${status}\n${issueList || '  - (none)'}`;
+            }).join('\n\n');
+
+            // Post dispatch report
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: planIssue.number,
+              body: `# 🚀 Agents Dispatched!\n\n` +
+                `**${assignedIssues.length}** issues assigned to \`@copilot\` immediately (Wave 1: Schema).\n` +
+                `**${issueDetails.length - assignedIssues.length}** issues queued for later waves.\n\n` +
+                `${waveReport}\n\n` +
+                `---\n\n` +
+                `## What Happens Next\n\n` +
+                `1. Copilot will create feature branches and open PRs for each Wave 1 issue\n` +
+                `2. The CI pipeline validates each PR (pack, check, import, test)\n` +
+                `3. **You review and merge** the PRs\n` +
+                `4. After Wave 1 merges, run the **Dispatch Next Wave** workflow to assign Wave 2\n\n` +
+                `> 💡 To manually assign any issue: go to the issue → assign \`copilot\`\n` +
+                `> 💡 To dispatch the next wave: Actions → "Dispatch Next Wave" → Run workflow`
+            });
+
+            // Also comment on the parent PRD
+            if (prdNumber) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prdNumber,
+                body: `## 🚀 Plan Approved — Agents Dispatched\n\n` +
+                  `The plan has been approved and Wave 1 (Schema) issues have been assigned to \`@copilot\`.\n\n` +
+                  `Track progress at #${planIssue.number}`
+              });
+            }
+
+  dispatch-next-wave:
+    name: Dispatch Next Wave of Work Items
+    if: github.event.label.name == 'dispatch-next-wave'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch Queued Issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Find the next wave to dispatch
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+
+            // Find the lowest numbered wave that has unassigned issues
+            for (const waveNum of [2, 3, 4]) {
+              const waveLabel = `wave-${waveNum}`;
+              const waveIssues = issues.filter(i =>
+                i.labels.some(l => l.name === waveLabel) &&
+                !i.assignees.some(a => a.login === 'copilot')
+              );
+
+              if (waveIssues.length > 0) {
+                for (const issue of waveIssues) {
+                  try {
+                    await github.rest.issues.addAssignees({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issue.number,
+                      assignees: ['copilot']
+                    });
+                    console.log(`Assigned #${issue.number} to copilot (Wave ${waveNum})`);
+                  } catch (e) {
+                    console.log(`Could not assign #${issue.number}: ${e.message}`);
+                  }
+                }
+
+                // Post on the plan review issue
+                const planReviewIssues = issues.filter(i =>
+                  i.labels.some(l => l.name === 'plan-review') && i.state === 'open'
+                );
+                for (const plan of planReviewIssues) {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: plan.number,
+                    body: `## 🌊 Wave ${waveNum} Dispatched\n\n` +
+                      waveIssues.map(i => `- #${i.number} — ${i.title} → assigned to \`@copilot\``).join('\n')
+                  });
+                }
+
+                break; // Only dispatch one wave at a time
+              }
+            }
