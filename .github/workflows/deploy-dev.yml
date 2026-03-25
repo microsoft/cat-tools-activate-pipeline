@@ -52,12 +52,13 @@ jobs:
             --allowWrite true
 
       - name: Import to Dev
+        timeout-minutes: 15
         run: |
           pac solution import `
             --path "${{ env.SOLUTION_NAME }}.zip" `
             --activate-plugins true `
-            --force-overwrite true `
-            --async true
+            --force-overwrite true
 
       - name: Publish Customizations
+        timeout-minutes: 5
         run: pac solution publish
