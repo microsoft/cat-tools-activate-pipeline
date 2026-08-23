@@ -25,10 +25,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: '8.x'
 
@@ -81,7 +81,7 @@ jobs:
 
       - name: Post Schema Validation Results to PR
         if: always() && hashFiles('TestOutput/dataverse/schema-validation-summary.md') != ''
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             const fs = require('fs');
@@ -103,14 +103,14 @@ jobs:
 
       - name: Upload Solution Artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: solution-zip
           path: "${{ env.SOLUTION_NAME }}.zip"
 
       - name: Upload Checker Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: checker-results
           path: checker-results/
@@ -118,7 +118,7 @@ jobs:
 
       - name: Upload Dataverse Validation Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dataverse-validation-results
           path: TestOutput/dataverse/
@@ -131,10 +131,10 @@ jobs:
     if: success()
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: '8.x'
 
@@ -142,7 +142,7 @@ jobs:
         run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
 
@@ -244,7 +244,7 @@ jobs:
 
       - name: Post Test Summary to PR
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             const fs = require('fs');
@@ -302,7 +302,7 @@ jobs:
 
       - name: Upload Dataverse Test Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: test-results
           path: TestOutput/
@@ -310,7 +310,7 @@ jobs:
 
       - name: Upload Playwright E2E Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: e2e-test-results
           path: TestOutput/e2e/
@@ -318,7 +318,7 @@ jobs:
 
       - name: Upload Failure Screenshots
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: e2e-failure-screenshots
           path: TestOutput/e2e/test-results/
